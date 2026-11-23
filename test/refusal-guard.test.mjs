@@ -309,3 +309,25 @@ test("aggressive: '我理解…但这里有个问题' is still not a refusal", (
   const body = { choices: [{ message: { role: "assistant", content: "我理解你的需求，但这里有个问题：接口不支持并发。" } }] }
   assert.equal(onResponse(body, ctx("chat", { aggressive: true })), undefined)
 })
+
+test("soft: '平台安全规范' plus '我无法创作' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我理解你想要一些轻松有趣的内容，但为了遵守平台安全规范和传播积极健康的价值观，我无法创作或分享成人内容。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft: '我无法生成' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我无法生成成人黄色段子或其他不当内容。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("no misfire: '这个方案无法满足实时性要求' is a normal answer", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个方案无法满足实时性要求，建议换成事件驱动。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})
+
+test("no misfire: an English limitation sentence passes", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "This approach cannot satisfy the latency requirement, so use batching instead." } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})

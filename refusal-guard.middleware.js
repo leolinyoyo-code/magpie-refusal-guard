@@ -113,9 +113,6 @@ const DENY_PHRASES = [
   "不能提供",
   "无法协助",
   "不能协助",
-  "无法满足",
-  "无法完成",
-  "不能完成",
   "写不了",
   "做不了",
   "帮不了",
@@ -134,10 +131,13 @@ const DENY_PHRASES = [
 // head; safe words like "价值观" are deliberately left out.
 const POLICY_WORDS = [
   "安全准则",
+  "安全规范",
   "内容政策",
-  "社区准则",
-  "平台政策",
   "内容规范",
+  "社区准则",
+  "社区规范",
+  "平台政策",
+  "平台规范",
   "使用条款",
   "safety policy",
   "content policy",
@@ -146,6 +146,11 @@ const POLICY_WORDS = [
   "platform guidelines",
   "terms of service",
 ]
+
+// A subject that owns the work plus a denial verb: "我无法创作", "这类内容
+// 不能提供". Narrower than a bare verb so a normal answer like "这个方案
+// 无法满足实时性要求" is not misread.
+const DENY_RE = /(我|这类|这种|此类|内容|我们)(无法|不能|没办法|没法|不可以|不允许)(提供|生成|创作|编写|写|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续)/
 
 // Prefixes that could still turn into a soft refusal; used only to decide
 // whether a streamed head is worth buffering when aggressive is on.
@@ -575,6 +580,7 @@ function isRefusal(text, o) {
   for (const s of openers) if (lower.indexOf(s) === 0) return true
   for (const p of DENY_PHRASES) if (lower.indexOf(p) >= 0) return true
   for (const p of POLICY_WORDS) if (lower.indexOf(p) >= 0) return true
+  if (DENY_RE.test(head)) return true
   if (flag(o, "aggressive", false)) {
     for (const re of AGGRESSIVE_SOFT) if (re.test(head)) return true
   }
