@@ -417,3 +417,9 @@ test("no misfire: '这个功能不能并发' passes", () => {
   const body = { choices: [{ message: { role: "assistant", content: "这个功能不能并发调用，需要加锁。" } }] }
   assert.equal(onResponse(body, ctx("chat")), undefined)
 })
+
+test("soft: a bare '不行' opener is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "不行，这个我不能写。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
