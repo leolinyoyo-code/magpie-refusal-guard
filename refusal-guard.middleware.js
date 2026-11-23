@@ -151,7 +151,7 @@ const POLICY_WORDS = [
 // 我没法照做". The subject and the denial may have a few characters between
 // them ("这个请求我"), so the gap is allowed. Narrower than a bare verb so a
 // normal answer like "这个方案无法满足实时性要求" is not misread.
-const DENY_RE = /(我|我们|这类|这种|此类|内容|请求|(这个|那个)(请求|问题|任务|内容|操作|要求|东西))[^，。！？\n]{0,12}(无法|不能|没办法|没法|不可以|不允许|不会)(提供|生成|创作|编写|写|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续|照做|接受|配合|执行|处理|答应|回应)/
+const DENY_RE = /(我|我们|这类|这种|此类|内容|请求|(这个|那个)(请求|问题|任务|内容|操作|要求|东西))[^，。！？\n]{0,12}(无法|不能|没办法|没法|不可以|不允许|不会)[你您我]?(提供|生成|创作|编写|写|帮|讲|说|给|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续|照做|接受|配合|执行|处理|答应|回应)/
 
 // "我不写这个" / "这个我不做": a subject, then a bare "不" plus the verb
 // that would do the work. "不建议/不认为/不支持" are deliberately not here.
@@ -159,7 +159,7 @@ const DENY_VERB_RE = /(我|这个|那个|这类|这种|此类|内容|请求|我�
 
 // A denial plus a substitution offer is a refusal in shape even when it
 // sounds helpful: "这个请求我没法照做。换个方向的话，…我都能帮".
-const SUBSTITUTE_RE = /(没法|无法|不能|不了|不行|不写|不做|不提供|不生成|不创作)[^。！？\n]{0,40}(换个方向|换个话题|聊点别的|聊别的|都能帮|随时说|我照常处理|照常处理|我可以帮|我可以给你|写故事|讲笑话)/
+const SUBSTITUTE_RE = /(没法|无法|不能|不了|不行|不写|不做|不提供|不生成|不创作)[^。！？\n]{0,40}(换个方向|换个话题|聊点别的|聊别的|都能帮|随时说|我照常处理|照常处理|我可以帮|我可以给你|写故事|讲笑话|有其他需要|直接上手|都可以直接)/
 
 const SOFT_SUBJECTS = ["请求", "问题", "任务", "内容", "操作", "要求", "东西"]
 

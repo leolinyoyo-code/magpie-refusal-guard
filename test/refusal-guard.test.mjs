@@ -374,3 +374,9 @@ test("no misfire: '这个不支持并发，换成异步吧' stays normal", () =>
   const body = { choices: [{ message: { role: "assistant", content: "这个不支持并发，换成异步队列吧。" } }] }
   assert.equal(onResponse(body, ctx("chat")), undefined)
 })
+
+test("soft: '这类内容我不能帮你写。有其他需要的话…' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这类内容我不能帮你写。有其他需要的话，代码、调试、系统运维这些我都可以直接上手。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
