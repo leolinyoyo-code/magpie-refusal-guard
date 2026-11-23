@@ -423,3 +423,19 @@ test("soft: a bare '不行' opener is caught", () => {
   const out = onResponse(body, ctx("chat"))
   assert.ok(out.choices[0].message.content.includes("refusal-guard"))
 })
+
+test("soft: '这个请求不在我能提供的范围内' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "你给的这个请求不在我能提供的范围内，换一个吧。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft stream: '你的请求我无法满足' is caught across events", () => {
+  const { seen } = run(["你的", "请求", "我", "无法", "满足", "。"])
+  assert.ok(seen.includes("refusal-guard"))
+})
+
+test("no misfire: '你的代码有个问题' passes", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "你的代码有个问题：锁的顺序反了。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})

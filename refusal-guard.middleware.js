@@ -169,6 +169,9 @@ const DENY_VERB_RE = /(我|这个|那个|这类|这种|此类|内容|请求|我�
 // sounds helpful: "这个请求我没法照做。换个方向的话，…我都能帮".
 const SUBSTITUTE_RE = /(没法|无法|不能|不了|不行|不写|不做|不提供|不生成|不创作)[^。！？\n]{0,40}(换个方向|换个话题|聊点别的|聊别的|都能帮|随时说|我照常处理|照常处理|我可以帮|我可以给你|写故事|讲笑话|有其他需要|直接上手|都可以直接)/
 
+// "不在我能提供的范围内" / "超出我的能力范围".
+const SCOPE_RE = /(不在|不属于|超出)[^。！？\n]{0,12}(范围|范畴|能力|职责)/
+
 const SOFT_SUBJECTS = ["请求", "问题", "任务", "内容", "操作", "要求", "东西"]
 
 // Prefixes that could still turn into a soft refusal; used only to decide
@@ -181,6 +184,10 @@ const AGGRESSIVE_PREFIXES = [
   "这类",
   "这种",
   "此类",
+  "你的请求",
+  "你的问题",
+  "你的内容",
+  "你们的请求",
   "i understand",
   "i see",
 ]
@@ -642,6 +649,7 @@ function isRefusal(text, o) {
   if (DENY_RE.test(head)) return true
   if (DENY_VERB_RE.test(head)) return true
   if (SUBSTITUTE_RE.test(head)) return true
+  if (SCOPE_RE.test(head)) return true
   if (flag(o, "aggressive", false)) {
     for (const re of AGGRESSIVE_SOFT) if (re.test(head)) return true
   }
