@@ -203,6 +203,16 @@ function actionOf(o) {
   return o.action === "drop" ? "drop" : "replace"
 }
 
+// dbg writes the text a hook actually judged to magpie's log (at most 60
+// lines a minute reach it) when the debug option is on. It never changes
+// the request or the reply.
+function dbg(o, tag, text) {
+  if (!o || o.debug !== true) return
+  try {
+    console.log("[refusal-guard] " + tag + " " + JSON.stringify(String(text).slice(0, 160)))
+  } catch (e) {}
+}
+
 // ---------- injection: onRequest / onProvider ----------
 
 export function onRequest(body, ctx) {
@@ -382,6 +392,11 @@ export function onEvent(ev, ctx) {
   }
   const combined = (st.buf || "") + slot.text
   st.buf = combined
+  if (!st.dbgN) st.dbgN = 0
+  if (st.dbgN < 3) {
+    dbg(o, "event" + st.dbgN, combined)
+    st.dbgN++
+  }
   if (isRefusal(combined, o)) {
     st.refused = true
     st.buf = ""
@@ -409,6 +424,7 @@ export function onResponse(body, ctx) {
   if (!flag(o, "guard", true)) return
   if (!body || typeof body !== "object") return
   const text = fullText(body, ctx.protocol)
+  dbg(o, "reply", text)
   if (!text || !isRefusal(text, o)) return
   if (actionOf(o) === "drop") return clearText(body, ctx.protocol)
   return setText(body, ctx.protocol, fallbackOf(o))
