@@ -380,3 +380,25 @@ test("soft: '这类内容我不能帮你写。有其他需要的话…' is caugh
   const out = onResponse(body, ctx("chat"))
   assert.ok(out.choices[0].message.content.includes("refusal-guard"))
 })
+
+test("soft: streamed '这个不行' is caught", () => {
+  const { seen } = run("这个不行。换个方向的话，代码我可以帮。".split(""))
+  assert.ok(seen.includes("refusal-guard"))
+})
+
+test("soft: '这个不行' in a whole reply is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个不行。换个方向的话，代码我可以帮。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft: '这个我做不到' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个我做不到，换个需求吧。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("no misfire: '这个功能已实现' passes", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个功能已实现，下面是代码。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})

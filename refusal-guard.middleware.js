@@ -59,6 +59,11 @@ const REFUSAL_OPENERS = [
   "我非常抱歉",
   "我十分抱歉",
   "很遗憾",
+  "这个不行",
+  "这不行",
+  "那不行",
+  "做不到",
+  "办不到",
   "我无法",
   "我不能",
   "我没办法",
@@ -113,6 +118,8 @@ const DENY_PHRASES = [
   "不能提供",
   "无法协助",
   "不能协助",
+  "做不到",
+  "办不到",
   "写不了",
   "做不了",
   "帮不了",
@@ -185,6 +192,7 @@ function maybeThisThat(t) {
     if (t.indexOf(d) !== 0) continue
     const rest = t.slice(d.length)
     if (!rest) return true
+    if (rest.charAt(0) === "不") return true
     for (const s of SOFT_SUBJECTS) {
       if (s.indexOf(rest) === 0) return true
       if (rest.indexOf(s) === 0) return true
@@ -422,12 +430,13 @@ export function onEvent(ev, ctx) {
   }
   const combined = (st.buf || "") + slot.text
   st.buf = combined
+  const hit = isRefusal(combined, o)
   if (!st.dbgN) st.dbgN = 0
   if (st.dbgN < 3) {
-    dbg(o, "event" + st.dbgN, combined)
+    dbg(o, "event" + st.dbgN + (hit ? " HIT" : ""), combined)
     st.dbgN++
   }
-  if (isRefusal(combined, o)) {
+  if (hit) {
     st.refused = true
     st.buf = ""
     if (actionOf(o) === "drop") return null
@@ -454,8 +463,9 @@ export function onResponse(body, ctx) {
   if (!flag(o, "guard", true)) return
   if (!body || typeof body !== "object") return
   const text = fullText(body, ctx.protocol)
-  dbg(o, "reply", text)
-  if (!text || !isRefusal(text, o)) return
+  const hit = !!text && isRefusal(text, o)
+  dbg(o, hit ? "reply HIT" : "reply MISS", text)
+  if (!hit) return
   if (actionOf(o) === "drop") return clearText(body, ctx.protocol)
   return setText(body, ctx.protocol, fallbackOf(o))
 }
