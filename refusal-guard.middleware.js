@@ -147,13 +147,21 @@ const POLICY_WORDS = [
   "terms of service",
 ]
 
-// A subject that owns the work plus a denial verb: "我无法创作", "这类内容
-// 不能提供". Narrower than a bare verb so a normal answer like "这个方案
-// 无法满足实时性要求" is not misread.
-const DENY_RE = /(我|这类|这种|此类|内容|我们)(无法|不能|没办法|没法|不可以|不允许)(提供|生成|创作|编写|写|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续)/
+// A subject that owns the work plus a denial verb: "我无法创作", "这个请求
+// 我没法照做". The subject and the denial may have a few characters between
+// them ("这个请求我"), so the gap is allowed. Narrower than a bare verb so a
+// normal answer like "这个方案无法满足实时性要求" is not misread.
+const DENY_RE = /(我|我们|这类|这种|此类|内容|请求|(这个|那个)(请求|问题|任务|内容|操作|要求|东西))[^，。！？\n]{0,12}(无法|不能|没办法|没法|不可以|不允许|不会)(提供|生成|创作|编写|写|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续|照做|接受|配合|执行|处理|答应|回应)/
+
+// A denial plus a substitution offer is a refusal in shape even when it
+// sounds helpful: "这个请求我没法照做。换个方向的话，…我都能帮".
+const SUBSTITUTE_RE = /(没法|无法|不能|不了|不行)[^。！？\n]{0,40}(换个(方向|话题|思路|角度)|聊点别的|聊别的|都能帮|随时说|我可以帮|我可以给你)/
+
+const SOFT_SUBJECTS = ["请求", "问题", "任务", "内容", "操作", "要求", "东西"]
 
 // Prefixes that could still turn into a soft refusal; used only to decide
-// whether a streamed head is worth buffering when aggressive is on.
+// whether a streamed head is worth buffering. "这个/那个" is not here: it is
+// too common a sentence opener and maybeThisThat below judges it precisely.
 const AGGRESSIVE_PREFIXES = [
   "我理解",
   "我明白",
@@ -163,6 +171,24 @@ const AGGRESSIVE_PREFIXES = [
   "i understand",
   "i see",
 ]
+
+// maybeThisThat: true when the text is still a possible "这个/那个 + 请求…
+// + 没法…" refusal; false when it opens "这个/那个" but the next word can
+// never be one of those subjects ("这个功能…"); null when it opens with
+// neither.
+function maybeThisThat(t) {
+  for (const d of ["这个", "那个"]) {
+    if (t.indexOf(d) !== 0) continue
+    const rest = t.slice(d.length)
+    if (!rest) return true
+    for (const s of SOFT_SUBJECTS) {
+      if (s.indexOf(rest) === 0) return true
+      if (rest.indexOf(s) === 0) return true
+    }
+    return false
+  }
+  return null
+}
 
 // Soft shapes: a hedge ("我理解…") plus a denial ("…但无法…"). Off by
 // default because normal technical answers also open with a hedge.
@@ -597,6 +623,7 @@ function isRefusal(text, o) {
   for (const p of DENY_PHRASES) if (lower.indexOf(p) >= 0) return true
   for (const p of POLICY_WORDS) if (lower.indexOf(p) >= 0) return true
   if (DENY_RE.test(head)) return true
+  if (SUBSTITUTE_RE.test(head)) return true
   if (flag(o, "aggressive", false)) {
     for (const re of AGGRESSIVE_SOFT) if (re.test(head)) return true
   }
@@ -617,7 +644,13 @@ function isRefusal(text, o) {
 function couldBeRefusal(text, o) {
   const t = normalise(text).toLowerCase()
   if (!t) return true
-  let all = REFUSAL_OPENERS.concat(DENY_PHRASES, POLICY_WORDS, AGGRESSIVE_PREFIXES)
+  const tt = maybeThisThat(t)
+  if (tt === true) return true
+  for (const s of AGGRESSIVE_PREFIXES) {
+    if (s.indexOf(t) === 0) return true
+    if (t.indexOf(s) === 0 && t.length < 48) return true
+  }
+  let all = REFUSAL_OPENERS.concat(DENY_PHRASES, POLICY_WORDS)
   if (flag(o, "aggressive", false)) all = all.concat(AGGRESSIVE_OPENERS)
   for (const s of all) {
     if (s.indexOf(t) === 0) return true

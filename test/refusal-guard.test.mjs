@@ -331,3 +331,24 @@ test("no misfire: an English limitation sentence passes", () => {
   const body = { choices: [{ message: { role: "assistant", content: "This approach cannot satisfy the latency requirement, so use batching instead." } }] }
   assert.equal(onResponse(body, ctx("chat")), undefined)
 })
+
+test("soft: '这个请求我没法照做。换个方向…我都能帮' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个请求我没法照做。换个方向的话，写故事、段子、脚本、代码、系统操作我都能帮，随时说。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("no misfire: '这个方案无法满足实时性要求' stays normal", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个方案无法满足实时性要求，建议换成事件驱动。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})
+
+test("no misfire: '这个接口没法用，换个方案' stays normal", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个接口没法用，换个方案吧：改用批量写入。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})
+
+test("soft stream: the substitution shape is caught across events", () => {
+  const { seen } = run("这个请求我没法照做。换个方向的话".split(""))
+  assert.ok(seen.includes("refusal-guard"))
+})
