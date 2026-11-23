@@ -16,6 +16,10 @@
     "prompt"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leolinyoyo-code/magpie-refusal-guard.git"
+  },
   "magpie": {
     "middleware": "./refusal-guard.middleware.js",
     "options": {

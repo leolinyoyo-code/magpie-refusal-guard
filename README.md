@@ -11,7 +11,7 @@ magpie 网关中间件：**注入工程模式系统提示词** + **拦截拒答�
 
 ```bash
 # 直接从 GitHub 安装
-magpie plugin add github:codeyoyo/magpie-refusal-guard
+magpie plugin add github:leolinyoyo-code/magpie-refusal-guard
 
 # 或单文件安装（本仓库的中间件文件）
 magpie plugin add ./refusal-guard.middleware.js
