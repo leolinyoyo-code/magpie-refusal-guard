@@ -352,3 +352,25 @@ test("soft stream: the substitution shape is caught across events", () => {
   const { seen } = run("这个请求我没法照做。换个方向的话".split(""))
   assert.ok(seen.includes("refusal-guard"))
 })
+
+test("soft: '我不写这个。换成别的…我照常处理' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我不写这个。换成别的工作内容我照常处理。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft: '我不提供此类内容' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我不提供此类内容，请理解。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("no misfire: '我不建议这样做' stays normal", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我不建议这样做，因为会增加维护成本。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})
+
+test("no misfire: '这个不支持并发，换成异步吧' stays normal", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个不支持并发，换成异步队列吧。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})
