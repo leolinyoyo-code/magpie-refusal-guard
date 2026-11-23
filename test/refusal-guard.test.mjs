@@ -439,3 +439,19 @@ test("no misfire: '你的代码有个问题' passes", () => {
   const body = { choices: [{ message: { role: "assistant", content: "你的代码有个问题：锁的顺序反了。" } }] }
   assert.equal(onResponse(body, ctx("chat")), undefined)
 })
+
+test("soft: '此请求我无法提供' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "此请求我无法提供，换个话题吧。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft stream: a verbless '不能' opener is held until the verb", () => {
+  const { seen } = run(["不能", "输出", "成人内容。"])
+  assert.ok(seen.includes("refusal-guard"))
+})
+
+test("no misfire: '无法连接数据库' passes", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "无法连接数据库：连接池耗尽，建议加监控。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})

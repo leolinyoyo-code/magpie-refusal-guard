@@ -159,7 +159,12 @@ const POLICY_WORDS = [
 // 我没法照做". The subject and the denial may have a few characters between
 // them ("这个请求我"), so the gap is allowed. Narrower than a bare verb so a
 // normal answer like "这个方案无法满足实时性要求" is not misread.
-const DENY_RE = /(我|我们|这类|这种|此类|内容|请求|(这个|那个)(请求|问题|任务|内容|操作|要求|东西))[^，。！？\n]{0,12}(无法|不能|没办法|没法|不可以|不允许|不会)[你您我]?(提供|生成|创作|编写|写|帮|讲|说|给|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续|照做|接受|配合|执行|处理|答应|回应)/
+const DENY_RE = /(我|我们|这类|这种|此类|此(请求|内容|项|操作)|内容|请求|(这个|那个)(请求|问题|任务|内容|操作|要求|东西))[^，。！？\n]{0,12}(无法|不能|没办法|没法|不可以|不允许|不会)[你您我]?(提供|生成|创作|编写|写|帮|讲|说|给|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续|照做|接受|配合|执行|处理|答应|回应)/
+
+// A denial in the first words with no subject before it: "不能输出…",
+// "无法提供…". The verb list keeps normal openings like "不能连接数据库"
+// from matching.
+const OPEN_DENY_RE = /^(不能|无法|不可以|不允许|没法|不会)[你您我]?(提供|生成|创作|编写|写|帮|讲|说|给|输出|分享|讨论|回答|协助|帮助|支持|满足|完成|参与|介绍|推荐|给出|继续|照做|接受|配合|执行|处理|答应|回应)/
 
 // "我不写这个" / "这个我不做": a subject, then a bare "不" plus the verb
 // that would do the work. "不建议/不认为/不支持" are deliberately not here.
@@ -173,6 +178,17 @@ const SUBSTITUTE_RE = /(没法|无法|不能|不了|不行|不写|不做|不提�
 const SCOPE_RE = /(不在|不属于|超出)[^。！？\n]{0,12}(范围|范畴|能力|职责)/
 
 const SOFT_SUBJECTS = ["请求", "问题", "任务", "内容", "操作", "要求", "东西"]
+
+// Verbs that complete a denial. Shared by the stream buffering so a head
+// like "无法连…" is let go while "不能输…" is held.
+const DENY_VERBS = [
+  "提供", "生成", "创作", "编写", "写", "帮", "讲", "说", "给", "输出",
+  "分享", "讨论", "回答", "协助", "帮助", "支持", "满足", "完成", "参与",
+  "介绍", "推荐", "给出", "继续", "照做", "接受", "配合", "执行", "处理",
+  "答应", "回应",
+]
+
+const OPEN_DENY_PREFIXES = ["不能", "无法", "不可以", "不允许", "没法", "不会"]
 
 // Prefixes that could still turn into a soft refusal; used only to decide
 // whether a streamed head is worth buffering. "这个/那个" is not here: it is
@@ -647,6 +663,7 @@ function isRefusal(text, o) {
   for (const p of DENY_PHRASES) if (lower.indexOf(p) >= 0) return true
   for (const p of POLICY_WORDS) if (lower.indexOf(p) >= 0) return true
   if (DENY_RE.test(head)) return true
+  if (OPEN_DENY_RE.test(head)) return true
   if (DENY_VERB_RE.test(head)) return true
   if (SUBSTITUTE_RE.test(head)) return true
   if (SCOPE_RE.test(head)) return true
@@ -675,6 +692,15 @@ function couldBeRefusal(text, o) {
   for (const s of AGGRESSIVE_PREFIXES) {
     if (s.indexOf(t) === 0) return true
     if (t.indexOf(s) === 0 && t.length < 48) return true
+  }
+  for (const s of OPEN_DENY_PREFIXES) {
+    if (s.indexOf(t) === 0) return true
+    if (t.indexOf(s) === 0) {
+      const rest = t.slice(s.length)
+      if (!rest) return true
+      for (const v of DENY_VERBS) if (v.indexOf(rest) === 0 || rest.indexOf(v) === 0) return true
+      return false
+    }
   }
   let all = REFUSAL_OPENERS.concat(DENY_PHRASES, POLICY_WORDS)
   if (flag(o, "aggressive", false)) all = all.concat(AGGRESSIVE_OPENERS)
