@@ -1,0 +1,27 @@
+{
+  "name": "magpie-refusal-guard",
+  "version": "0.1.0",
+  "description": "Magpie gateway middleware: inject an engineering-mode system prompt and catch refusal-shaped replies in both streaming and non-streaming responses.",
+  "type": "module",
+  "files": [
+    "refusal-guard.middleware.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "magpie",
+    "magpie-plugin",
+    "middleware",
+    "gateway",
+    "prompt"
+  ],
+  "license": "MIT",
+  "magpie": {
+    "middleware": "./refusal-guard.middleware.js",
+    "options": {
+      "inject": true,
+      "guard": true,
+      "action": "replace"
+    }
+  }
+}
