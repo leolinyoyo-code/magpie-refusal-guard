@@ -267,3 +267,45 @@ test("custom patterns catch your own shapes", () => {
   const out = onResponse(body, ctx("chat", { patterns: ["^作为\\s*AI"] }))
   assert.ok(out.choices[0].message.content.includes("refusal-guard"))
 })
+
+// ---------- soft refusals (the shapes WorkBuddy actually returns) ----------
+
+test("soft: a hedge followed by a denial is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我理解您可能是在寻求娱乐或放松，但我无法提供成人内容或黄色段子。这类内容违反了平台安全准则。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft: a policy citation is caught anywhere in the head", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这类内容可能涉及低俗、冒犯性，也违反了平台安全准则，我不能继续。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft: '我写不了，但给你个擦边的' is caught", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这类露骨的成人内容我写不了，但给你个擦边的：" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.ok(out.choices[0].message.content.includes("refusal-guard"))
+})
+
+test("soft: a normal technical answer with a plain hedge passes", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我理解你的意思，但这里有个问题：并发写会导致竞态。下面是修复。" } }] }
+  const out = onResponse(body, ctx("chat"))
+  assert.equal(out, undefined)
+})
+
+test("soft stream: a hedge and a denial split across events are caught", () => {
+  const { seen } = run("我理解您可能是在寻求娱乐，但我无法提供".split(""))
+  assert.ok(seen.includes("refusal-guard"))
+})
+
+test("stream: a normal long answer is still put back together", () => {
+  const text = "这是完整的实现代码，运行后即可使用。"
+  const { seen } = run(text.split(""))
+  assert.equal(seen, text)
+})
+
+test("aggressive: '我理解…但这里有个问题' is still not a refusal", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "我理解你的需求，但这里有个问题：接口不支持并发。" } }] }
+  assert.equal(onResponse(body, ctx("chat", { aggressive: true })), undefined)
+})

@@ -96,8 +96,6 @@ const AGGRESSIVE_OPENERS = [
   "首先需要说明",
   "首先我要说明",
   "需要说明的是",
-  "我理解你的",
-  "我明白你的",
   "i can help, but",
   "i'd be happy to help, but",
   "i would be happy to help, but",
@@ -106,6 +104,68 @@ const AGGRESSIVE_OPENERS = [
 ]
 
 const HEAD = 60
+
+// Denial phrases that mark a refusal even when the reply opens softly
+// ("我理解您可能…但我无法提供…"). Matched anywhere in the first HEAD chars,
+// not only at the start.
+const DENY_PHRASES = [
+  "无法提供",
+  "不能提供",
+  "无法协助",
+  "不能协助",
+  "无法满足",
+  "无法完成",
+  "不能完成",
+  "写不了",
+  "做不了",
+  "帮不了",
+  "给不了",
+  "没法写",
+  "没法做",
+  "cannot provide",
+  "can't provide",
+  "cannot help with",
+  "can't help with",
+  "unable to provide",
+  "not able to provide",
+]
+
+// Content-policy vocabulary that only refusals use. Matched anywhere in the
+// head; safe words like "价值观" are deliberately left out.
+const POLICY_WORDS = [
+  "安全准则",
+  "内容政策",
+  "社区准则",
+  "平台政策",
+  "内容规范",
+  "使用条款",
+  "safety policy",
+  "content policy",
+  "community guidelines",
+  "platform policy",
+  "platform guidelines",
+  "terms of service",
+]
+
+// Prefixes that could still turn into a soft refusal; used only to decide
+// whether a streamed head is worth buffering when aggressive is on.
+const AGGRESSIVE_PREFIXES = [
+  "我理解",
+  "我明白",
+  "这类",
+  "这种",
+  "此类",
+  "i understand",
+  "i see",
+]
+
+// Soft shapes: a hedge ("我理解…") plus a denial ("…但无法…"). Off by
+// default because normal technical answers also open with a hedge.
+const AGGRESSIVE_SOFT = [
+  /^我(理解|明白)[^。！？\n]{0,40}(无法|不能|不了|不太|不适合|不方便)/,
+  /^(这类|这种|此类)[^。！？\n]{0,30}(无法|不能|不了|不适合|不提供|不写)/,
+  /^i (understand|see)[^.\n]{0,60}(but|however)[^.\n]{0,30}(can't|cannot|can not|unable|won't)/,
+]
 
 // ---------- options ----------
 
@@ -127,8 +187,8 @@ function fallbackOf(o) {
 }
 
 function holdOf(o) {
-  const n = typeof o.holdChars === "number" ? o.holdChars : 12
-  if (!isFinite(n)) return 12
+  const n = typeof o.holdChars === "number" ? o.holdChars : 48
+  if (!isFinite(n)) return 48
   if (n < 1) return 1
   if (n > 200) return 200
   return Math.floor(n)
@@ -317,7 +377,6 @@ export function onEvent(ev, ctx) {
   }
   const combined = (st.buf || "") + slot.text
   st.buf = combined
-  const openers = openersOf(o)
   if (isRefusal(combined, o)) {
     st.refused = true
     st.buf = ""
@@ -325,7 +384,13 @@ export function onEvent(ev, ctx) {
     slot.obj[slot.key] = fallbackOf(o)
     return ev
   }
-  if (combined.length >= holdOf(o) || !couldBeRefusal(combined, openers)) {
+  if (combined.length >= holdOf(o)) {
+    st.released = true
+    st.buf = ""
+    slot.obj[slot.key] = combined
+    return ev
+  }
+  if (!couldBeRefusal(combined, o)) {
     st.released = true
     st.buf = ""
     slot.obj[slot.key] = combined
@@ -508,6 +573,11 @@ function isRefusal(text, o) {
   const lower = head.toLowerCase()
   const openers = openersOf(o)
   for (const s of openers) if (lower.indexOf(s) === 0) return true
+  for (const p of DENY_PHRASES) if (lower.indexOf(p) >= 0) return true
+  for (const p of POLICY_WORDS) if (lower.indexOf(p) >= 0) return true
+  if (flag(o, "aggressive", false)) {
+    for (const re of AGGRESSIVE_SOFT) if (re.test(head)) return true
+  }
   if (Array.isArray(o.patterns)) {
     for (const p of o.patterns) {
       if (typeof p !== "string" || !p) continue
@@ -522,10 +592,12 @@ function isRefusal(text, o) {
 // (or already contains one). When it can't become a refusal any more, the
 // buffered text is let go at once — a reply that opens "好的" is not held
 // for holdChars characters, and a short normal answer is never swallowed.
-function couldBeRefusal(text, openers) {
+function couldBeRefusal(text, o) {
   const t = normalise(text).toLowerCase()
   if (!t) return true
-  for (const s of openers) {
+  let all = REFUSAL_OPENERS.concat(DENY_PHRASES, POLICY_WORDS, AGGRESSIVE_PREFIXES)
+  if (flag(o, "aggressive", false)) all = all.concat(AGGRESSIVE_OPENERS)
+  for (const s of all) {
     if (s.indexOf(t) === 0) return true
     if (t.indexOf(s) === 0) return true
   }
