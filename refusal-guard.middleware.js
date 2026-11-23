@@ -176,6 +176,7 @@ const SOFT_SUBJECTS = ["请求", "问题", "任务", "内容", "操作", "要求
 const AGGRESSIVE_PREFIXES = [
   "我理解",
   "我明白",
+  "我不会",
   "这类",
   "这种",
   "此类",
@@ -193,6 +194,7 @@ function maybeThisThat(t) {
     const rest = t.slice(d.length)
     if (!rest) return true
     if (rest.charAt(0) === "不") return true
+    if (rest.slice(0, 2).indexOf("不") >= 0) return true
     for (const s of SOFT_SUBJECTS) {
       if (s.indexOf(rest) === 0) return true
       if (rest.indexOf(s) === 0) return true

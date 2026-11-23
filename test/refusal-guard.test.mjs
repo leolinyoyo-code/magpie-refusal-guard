@@ -402,3 +402,18 @@ test("no misfire: '这个功能已实现' passes", () => {
   const body = { choices: [{ message: { role: "assistant", content: "这个功能已实现，下面是代码。" } }] }
   assert.equal(onResponse(body, ctx("chat")), undefined)
 })
+
+test("soft stream: '这个我不能' + '提供' is caught across events", () => {
+  const { seen } = run(["这个我不能", "提供", "这类内容。"])
+  assert.ok(seen.includes("refusal-guard"))
+})
+
+test("soft stream: '我不会' + '生成' is caught across events", () => {
+  const { seen } = run(["我不会", "生成", "这种内容。"])
+  assert.ok(seen.includes("refusal-guard"))
+})
+
+test("no misfire: '这个功能不能并发' passes", () => {
+  const body = { choices: [{ message: { role: "assistant", content: "这个功能不能并发调用，需要加锁。" } }] }
+  assert.equal(onResponse(body, ctx("chat")), undefined)
+})
